@@ -8,6 +8,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.Dimension;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.Point;
 import org.openqa.selenium.StaleElementReferenceException;
@@ -239,6 +240,7 @@ public class BrowserTasks implements Runnable {
 		WebElement dropdown = wait.until(
 				ExpectedConditions.elementToBeClickable(By.xpath("//div[contains(@title, \"Show devices using\")]")));
 		dropdown.click();
+
 		WebElement currentDeviceLabel = dropdown.findElement(By.tagName("label"));
 		if (currentDeviceLabel.getText().equals(device)) {
 			System.out.println("Currently selected device is " + device + ". Handling...");
@@ -246,17 +248,44 @@ public class BrowserTasks implements Runnable {
 			builder.moveToElement(driver.findElement(By.xpath("//div[contains(@class, 'fmip-modal-pane')]")), 0, 0)
 					.click().build().perform();
 		} else {
-
 			// handle stale element exception here
 			boolean handled = false;
 			do {
 				try {
-					wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//div[@title=\"" + device + "\"]")))
+					wait.withTimeout(Duration.ofSeconds(1)).until(
+							ExpectedConditions.elementToBeClickable(By.xpath("//div[@title=\"" + device + "\"]")))
 							.click();
+
+					// Handle if the user is presented with a popup for device offline
+					// div[contains(@class, 'find-me')]/label[text()='OK']
+					try {
+						// Check if green/black location dot is present
+						Thread.sleep(1000);
+						WebElement suddenOKPopup = wait.withTimeout(Duration.ofSeconds(1))
+								.until(ExpectedConditions.visibilityOfElementLocated(
+										By.xpath("//div[contains(@class, 'find-me')]/label[text()='OK']")));
+
+						suddenOKPopup.click();
+						System.out.println("Clicked on sudden ok");
+					} catch (Exception e) {
+						log("Could not find the sudden ok popup");
+						// e.printStackTrace();
+					} finally {
+						// reset the modified timeout
+						wait.withTimeout(Duration.ofSeconds(Dashboard.WAIT_TIMEOUT));
+					}
+
 					handled = true;
 				} catch (StaleElementReferenceException e) {
 					log("Handling stale element reference exception");
 					handled = false;
+				} catch (TimeoutException e) {
+					System.out.println("Time out exception for device, probably invisible in the list. Handling...");
+					WebElement element = driver.findElement(By.xpath("//div[@class='thumb-center']"));
+					Actions builder = new Actions(driver);
+					builder.dragAndDropBy(element, 0, 40).build().perform();
+				} finally {
+					wait.withTimeout(Duration.ofSeconds(Dashboard.WAIT_TIMEOUT));
 				}
 			} while (!handled);
 		}
@@ -268,8 +297,8 @@ public class BrowserTasks implements Runnable {
 		driver.switchTo().frame("auth-frame");
 		wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("account_name_text_field")))
 				.sendKeys(Helpers.username, Keys.ENTER);
-		wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("password_text_field"))).sendKeys(Helpers.password,
-				Keys.ENTER);
+		wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("password_text_field")))
+				.sendKeys(Helpers.password, Keys.ENTER);
 	}
 
 	void logout() {
@@ -410,29 +439,36 @@ public class BrowserTasks implements Runnable {
 			throw new Exception("No active lost mode buttons found!");
 
 		wait.until(ExpectedConditions.elementToBeClickable(lostModeButton)).click();
-		wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//label[text()=\"Next\"]"))).click();
+		try {
+			wait.withTimeout(Duration.ofSeconds(1))
+					.until(ExpectedConditions.elementToBeClickable(By.xpath("//label[text()=\"Next\"]"))).click();
 
-		// TODO: clear the textarea
-		WebElement LostModeMessage = wait.until(ExpectedConditions
-				.elementToBeClickable(By.xpath("//textarea[@aria-label=\"Enter a message (Optional).\"]")));
-		LostModeMessage.clear();
-		LostModeMessage.sendKeys(LOST_MODE_MESSAGE);
-		driver.findElement(By.xpath("//label[text()=\"Done\"]")).click();
+			// TODO: clear the textarea
+			WebElement LostModeMessage = wait.until(ExpectedConditions
+					.elementToBeClickable(By.xpath("//textarea[@aria-label=\"Enter a message (Optional).\"]")));
+			LostModeMessage.clear();
+			LostModeMessage.sendKeys(LOST_MODE_MESSAGE);
+			driver.findElement(By.xpath("//label[text()=\"Done\"]")).click();
 
-		// Calculate time taken to make the button clickable again
-		// First, get the spinner
+			// Calculate time taken to make the button clickable again
+			// First, get the spinner
 
-		String siblingId = lostModeButton.getAttribute("id").split("-")[0];
-		WebElement lostModeSpinner = driver.findElement(By.id(siblingId + "-spinner"));
-		long startTime = System.currentTimeMillis();
-		// wait.until(ExpectedConditions.invisibilityOf(lostModeSpinner));
-		while (true) {
-			if (lostModeSpinner.getAttribute("class").contains("sc-hidden"))
-				break;
-			else
-				Thread.sleep(1000);
+			String siblingId = lostModeButton.getAttribute("id").split("-")[0];
+			WebElement lostModeSpinner = driver.findElement(By.id(siblingId + "-spinner"));
+			long startTime = System.currentTimeMillis();
+			// wait.until(ExpectedConditions.invisibilityOf(lostModeSpinner));
+			while (true) {
+				if (lostModeSpinner.getAttribute("class").contains("sc-hidden"))
+					break;
+				else
+					Thread.sleep(1000);
+			}
+			System.out.println((System.currentTimeMillis() - startTime) / 1000 + " seconds");
+		} catch (Exception e) {
+			System.out.println("Exception while finding next button due to sudden popup probably");
+		} finally {
+			wait.withTimeout(Duration.ofSeconds(Dashboard.WAIT_TIMEOUT));
 		}
-		System.out.println((System.currentTimeMillis() - startTime) / 1000 + " seconds");
 	}
 
 	WebElement getActiveLostModeButton() {

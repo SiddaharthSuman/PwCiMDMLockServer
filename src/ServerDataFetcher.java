@@ -55,13 +55,17 @@ public class ServerDataFetcher implements Runnable {
 			TasksRunner.deviceList = new LinkedList<String>(Arrays.asList(devicesData.devices));
 			WAIT_PERIOD = devicesData.timeout;
 			shutdownFlag = devicesData.shutdown;
-			lastFetch = LocalDateTime.now();
 
 		} catch (Exception e) {
 			System.out.println("There was an exception while fetching devices from server!");
 			e.printStackTrace();
 		} finally {
-			lock.unlock();
+			lastFetch = LocalDateTime.now();
+			try {
+				lock.unlock();
+			} catch (IllegalMonitorStateException e) {
+				System.out.println("This thread did not hold the log!");
+			}
 		}
 	}
 
@@ -71,6 +75,7 @@ public class ServerDataFetcher implements Runnable {
 		// TODO: Start the time of fetch
 		// TODO: Then, calculate to the next thread sleep
 		// TODO: REDO
+		lastFetch = LocalDateTime.now();
 		try {
 			do {
 				System.out.println("Rerunning this fetcher");
