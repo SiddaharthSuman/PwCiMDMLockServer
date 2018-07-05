@@ -166,7 +166,7 @@ public class BrowserTasks implements Runnable {
 			}
 			if (!TasksRunner.endOfTasks) {
 				device = TasksRunner.deviceList.remove(0);
-				System.out.println("Took device: " + device);
+				System.out.println(Thread.currentThread().getName() + " took device: " + device);
 				System.out.println("Remaining devices are: " + Arrays.toString(TasksRunner.deviceList.toArray()));
 			}
 
