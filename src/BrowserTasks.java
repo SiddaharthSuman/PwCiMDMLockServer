@@ -8,7 +8,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.Dimension;
-import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.Point;
 import org.openqa.selenium.StaleElementReferenceException;
@@ -194,17 +193,13 @@ public class BrowserTasks implements Runnable {
 					if (checkIfDeviceOffline()) {
 						log(device + ":" + DEVICE_IS_OFFLINE);
 						deviceStatusText.append("\n" + DEVICE_IS_OFFLINE);
-						reportStatusToServer(device, deviceStatusText.toString());
-						// Report state of the device to server as Offline without Pending
 						// Put device in lock state
-						putDeviceInLostMode();
+						putDeviceInLostMode(deviceStatusText);
 					} else {
 						log(device + ":" + DEVICE_IS_ONLINE);
 						deviceStatusText.append("\n" + DEVICE_IS_ONLINE);
-						reportStatusToServer(device, deviceStatusText.toString());
-						// Report state of the device to server as Online without Pending
 						// Put device in lock state
-						putDeviceInLostMode();
+						putDeviceInLostMode(deviceStatusText);
 					}
 				} else {
 					log(device + ":" + DEVICE_IS_IN_PENDING_MODE);
@@ -241,6 +236,24 @@ public class BrowserTasks implements Runnable {
 				ExpectedConditions.elementToBeClickable(By.xpath("//div[contains(@title, \"Show devices using\")]")));
 		dropdown.click();
 
+		// TODO: Scroll to the top till the All devices label is visible
+		boolean scrollhandled = false;
+		do {
+
+			try {
+				wait.withTimeout(Duration.ofMillis(500))
+						.until(ExpectedConditions.elementToBeClickable(By.xpath("//div[text()='All Devices']")));
+				scrollhandled = true;
+			} catch (Exception e) {
+				System.out.println("Unable to find the all devices div. Scrolling up...");
+				WebElement element = driver.findElement(By.xpath("//div[@class='thumb-center']"));
+				Actions builder = new Actions(driver);
+				builder.dragAndDropBy(element, 0, -40).build().perform();
+			} finally {
+				wait.withTimeout(Duration.ofSeconds(Dashboard.WAIT_TIMEOUT));
+			}
+		} while (!scrollhandled);
+
 		WebElement currentDeviceLabel = dropdown.findElement(By.tagName("label"));
 		if (currentDeviceLabel.getText().equals(device)) {
 			System.out.println("Currently selected device is " + device + ". Handling...");
@@ -252,14 +265,13 @@ public class BrowserTasks implements Runnable {
 			boolean handled = false;
 			do {
 				try {
-					wait.withTimeout(Duration.ofSeconds(1)).until(
+					wait.withTimeout(Duration.ofMillis(500)).until(
 							ExpectedConditions.elementToBeClickable(By.xpath("//div[@title=\"" + device + "\"]")))
 							.click();
 
 					// Handle if the user is presented with a popup for device offline
 					// div[contains(@class, 'find-me')]/label[text()='OK']
 					try {
-						// Check if green/black location dot is present
 						Thread.sleep(1000);
 						WebElement suddenOKPopup = wait.withTimeout(Duration.ofSeconds(1))
 								.until(ExpectedConditions.visibilityOfElementLocated(
@@ -433,12 +445,29 @@ public class BrowserTasks implements Runnable {
 		});
 	}
 
-	void putDeviceInLostMode() throws Exception {
+	void putDeviceInLostMode(StringBuilder deviceStatusText) throws Exception {
 		WebElement lostModeButton = getActiveLostModeButton();
 		if (lostModeButton == null)
 			throw new Exception("No active lost mode buttons found!");
 
 		wait.until(ExpectedConditions.elementToBeClickable(lostModeButton)).click();
+		
+		try {
+			Thread.sleep(1000);
+			WebElement suddenOKPopup = wait.withTimeout(Duration.ofSeconds(1))
+					.until(ExpectedConditions.visibilityOfElementLocated(
+							By.xpath("//div[contains(@class, 'find-me')]/label[text()='OK']")));
+
+			suddenOKPopup.click();
+			System.out.println("Clicked on sudden ok");
+		} catch (Exception e) {
+			log("Could not find the sudden ok popup");
+			// e.printStackTrace();
+		} finally {
+			// reset the modified timeout
+			wait.withTimeout(Duration.ofSeconds(Dashboard.WAIT_TIMEOUT));
+		}
+		
 		try {
 			wait.withTimeout(Duration.ofSeconds(1))
 					.until(ExpectedConditions.elementToBeClickable(By.xpath("//label[text()=\"Next\"]"))).click();
@@ -465,10 +494,19 @@ public class BrowserTasks implements Runnable {
 			}
 			System.out.println((System.currentTimeMillis() - startTime) / 1000 + " seconds");
 		} catch (Exception e) {
-			System.out.println("Exception while finding next button due to sudden popup probably");
+			System.out.println("Exception while finding next button due to sudden popup probably or if already in lost mode");
+			try {
+				driver.findElement(By.xpath("//label[text()='Stop Lost Mode']"));
+				log(device + ":" + DEVICE_IS_IN_LOST_MODE);
+				deviceStatusText.append("\n" + DEVICE_IS_IN_LOST_MODE);
+			} catch (Exception e1) {
+				System.out.println("Could not find stop lost mode button... maybe sudden popup is present");
+			}
 		} finally {
 			wait.withTimeout(Duration.ofSeconds(Dashboard.WAIT_TIMEOUT));
 		}
+		
+		reportStatusToServer(device, deviceStatusText.toString());
 	}
 
 	WebElement getActiveLostModeButton() {

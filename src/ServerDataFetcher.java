@@ -52,7 +52,9 @@ public class ServerDataFetcher implements Runnable {
 				devicesData = gson.fromJson(devicesJsonString, DevicesGson.class);
 			}
 			lock.lock();
-			TasksRunner.deviceList = new LinkedList<String>(Arrays.asList(devicesData.devices));
+			if (TasksRunner.deviceList == null || TasksRunner.deviceList.size() == 0) {
+				TasksRunner.deviceList = new LinkedList<String>(Arrays.asList(devicesData.devices));
+			}
 			WAIT_PERIOD = devicesData.timeout;
 			shutdownFlag = devicesData.shutdown;
 
@@ -71,10 +73,10 @@ public class ServerDataFetcher implements Runnable {
 
 	@Override
 	public void run() {
-		// TODO: Fetch devices
-		// TODO: Start the time of fetch
-		// TODO: Then, calculate to the next thread sleep
-		// TODO: REDO
+		// Fetch devices
+		// Start the time of fetch
+		// Then, calculate to the next thread sleep
+		// REDO
 		lastFetch = LocalDateTime.now();
 		try {
 			do {
