@@ -154,10 +154,13 @@ public class BrowserTasks implements Runnable {
 
 				// Calculate sleep time here
 				long timeElapsed = ChronoUnit.SECONDS.between(ServerDataFetcher.lastFetch, LocalDateTime.now());
-				long timeRemaining = ServerDataFetcher.WAIT_PERIOD - timeElapsed + 1;
+				long timeRemaining = ServerDataFetcher.WAIT_PERIOD - timeElapsed;
+				// Handling negative values or continuous 0 second wait
+				if (timeRemaining <= 0)
+					timeRemaining = 1;
 				System.out.println(
 						Thread.currentThread().getName() + " Remaining Time to wait: " + timeRemaining + " seconds");
-				Thread.sleep(Math.abs(timeRemaining) * 1000);
+				Thread.sleep(timeRemaining * 1000);
 				lock.lock();
 			}
 			if (!TasksRunner.endOfTasks) {
@@ -451,12 +454,11 @@ public class BrowserTasks implements Runnable {
 			throw new Exception("No active lost mode buttons found!");
 
 		wait.until(ExpectedConditions.elementToBeClickable(lostModeButton)).click();
-		
+
 		try {
 			Thread.sleep(1000);
-			WebElement suddenOKPopup = wait.withTimeout(Duration.ofSeconds(1))
-					.until(ExpectedConditions.visibilityOfElementLocated(
-							By.xpath("//div[contains(@class, 'find-me')]/label[text()='OK']")));
+			WebElement suddenOKPopup = wait.withTimeout(Duration.ofSeconds(1)).until(ExpectedConditions
+					.visibilityOfElementLocated(By.xpath("//div[contains(@class, 'find-me')]/label[text()='OK']")));
 
 			suddenOKPopup.click();
 			System.out.println("Clicked on sudden ok");
@@ -467,7 +469,7 @@ public class BrowserTasks implements Runnable {
 			// reset the modified timeout
 			wait.withTimeout(Duration.ofSeconds(Dashboard.WAIT_TIMEOUT));
 		}
-		
+
 		try {
 			wait.withTimeout(Duration.ofSeconds(1))
 					.until(ExpectedConditions.elementToBeClickable(By.xpath("//label[text()=\"Next\"]"))).click();
@@ -494,7 +496,8 @@ public class BrowserTasks implements Runnable {
 			}
 			System.out.println((System.currentTimeMillis() - startTime) / 1000 + " seconds");
 		} catch (Exception e) {
-			System.out.println("Exception while finding next button due to sudden popup probably or if already in lost mode");
+			System.out.println(
+					"Exception while finding next button due to sudden popup probably or if already in lost mode");
 			try {
 				driver.findElement(By.xpath("//label[text()='Stop Lost Mode']"));
 				log(device + ":" + DEVICE_IS_IN_LOST_MODE);
@@ -505,7 +508,7 @@ public class BrowserTasks implements Runnable {
 		} finally {
 			wait.withTimeout(Duration.ofSeconds(Dashboard.WAIT_TIMEOUT));
 		}
-		
+
 		reportStatusToServer(device, deviceStatusText.toString());
 	}
 
