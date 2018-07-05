@@ -54,9 +54,12 @@ public class ServerDataFetcher implements Runnable {
 			lock.lock();
 			if (TasksRunner.deviceList == null || TasksRunner.deviceList.size() == 0) {
 				TasksRunner.deviceList = new LinkedList<String>(Arrays.asList(devicesData.devices));
+			} else {
+				System.out.println("The list is not empty yet. Waiting before adding new devices.");
 			}
 			WAIT_PERIOD = devicesData.timeout;
-			shutdownFlag = devicesData.shutdown;
+			TasksRunner.endOfTasks = devicesData.shutdown;
+			// shutdownFlag = devicesData.shutdown;
 
 		} catch (Exception e) {
 			System.out.println("There was an exception while fetching devices from server!");
@@ -85,10 +88,7 @@ public class ServerDataFetcher implements Runnable {
 				Thread.sleep(WAIT_PERIOD * 1000);
 				fetchNewDevices();
 
-			} while (!shutdownFlag);
-			lock.lock();
-			TasksRunner.endOfTasks = true;
-			lock.unlock();
+			} while (true);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

@@ -15,19 +15,43 @@ public class TasksRunner {
 	static List<String> deviceList;
 	static ExecutorService service;
 	static boolean endOfTasks;
+	private static boolean tasksStarted;
 
 	public static void main(String[] args) {
-		getScreenDimensions();
 
 		ReentrantLock lock = new ReentrantLock();
 		runDeviceFetchSchedule(lock);
-		service = Executors.newFixedThreadPool(4);
+		// service = Executors.newFixedThreadPool(4);
 
-		for (int i = 0; i < 4; i++) {
-			BrowserTasks task = new BrowserTasks(lock);
-			service.execute(task);
-		}
-		service.shutdown();
+		do {
+
+			if (!tasksStarted) {
+				System.out.println("Entering for loop");
+				getScreenDimensions();
+				service = Executors.newFixedThreadPool(4);
+				for (int i = 0; i < 4; i++) {
+					BrowserTasks task = new BrowserTasks(lock);
+					service.execute(task);
+				}
+				service.shutdown();
+			}
+
+			// Stop tasksStarted when service is complete, which means endOfTasks will be
+			// true
+			tasksStarted = !service.isTerminated();
+
+			while (endOfTasks) {
+				// wait for it to be false again
+				try {
+					Thread.sleep(ServerDataFetcher.WAIT_PERIOD * 1000);
+					System.out.println("Waiting for shutdown to be false and sleeping for "
+							+ ServerDataFetcher.WAIT_PERIOD + " seconds");
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		} while (true);
 	}
 
 	static void runDeviceFetchSchedule(ReentrantLock lock) {
