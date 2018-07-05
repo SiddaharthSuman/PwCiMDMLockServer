@@ -3,6 +3,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -148,7 +149,7 @@ public class BrowserTasks implements Runnable {
 			while (TasksRunner.deviceList == null || TasksRunner.deviceList.size() <= 0) {
 				if (TasksRunner.endOfTasks)
 					break;
-				System.out.println(Thread.currentThread().getName() + "Sleeping while device list is null");
+				System.out.println(Thread.currentThread().getName() + " Sleeping while device list is null");
 				// Release lock before sleeping
 				lock.unlock();
 
@@ -165,6 +166,8 @@ public class BrowserTasks implements Runnable {
 			}
 			if (!TasksRunner.endOfTasks) {
 				device = TasksRunner.deviceList.remove(0);
+				System.out.println("Took device: " + device);
+				System.out.println("Remaining devices are: " + Arrays.toString(TasksRunner.deviceList.toArray()));
 			}
 
 		} catch (Exception e) {
@@ -249,9 +252,14 @@ public class BrowserTasks implements Runnable {
 				scrollhandled = true;
 			} catch (Exception e) {
 				System.out.println("Unable to find the all devices div. Scrolling up...");
-				WebElement element = driver.findElement(By.xpath("//div[@class='thumb-center']"));
-				Actions builder = new Actions(driver);
-				builder.dragAndDropBy(element, 0, -40).build().perform();
+				try {
+					WebElement element = driver.findElement(By.xpath("//div[@class='thumb-center']"));
+					Actions builder = new Actions(driver);
+					builder.dragAndDropBy(element, 0, -200).build().perform();
+				} catch (Exception scrollerException) {
+					// Dropdown just disappeared.. handle
+					dropdown.click();
+				}
 			} finally {
 				wait.withTimeout(Duration.ofSeconds(Dashboard.WAIT_TIMEOUT));
 			}
