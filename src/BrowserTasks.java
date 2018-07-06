@@ -185,7 +185,13 @@ public class BrowserTasks implements Runnable {
 
 		log("========Start of report #" + Thread.currentThread().getName() + " for " + device + " =========");
 
-		openDeviceDetails(device);
+		try {
+			openDeviceDetails(device);
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.out.println("Could not open device details. " + device + " device is not in list. Possible security breach!");
+			return;
+		}
 
 		StringBuilder deviceStatusText = new StringBuilder();
 		try {
@@ -235,7 +241,7 @@ public class BrowserTasks implements Runnable {
 		}
 	}
 
-	void openDeviceDetails(String device) {
+	void openDeviceDetails(String device) throws Exception{
 		// If the device is the same, the dropdown will not go away
 		// Check if the device is the same
 		WebElement dropdown = wait.until(
@@ -245,7 +251,6 @@ public class BrowserTasks implements Runnable {
 		// TODO: Scroll to the top till the All devices label is visible
 		boolean scrollhandled = false;
 		do {
-
 			try {
 				wait.withTimeout(Duration.ofMillis(500))
 						.until(ExpectedConditions.elementToBeClickable(By.xpath("//div[text()='All Devices']")));
@@ -274,7 +279,9 @@ public class BrowserTasks implements Runnable {
 		} else {
 			// handle stale element exception here
 			boolean handled = false;
+			int tries = 0;
 			do {
+				tries++;
 				try {
 					wait.withTimeout(Duration.ofMillis(500)).until(
 							ExpectedConditions.elementToBeClickable(By.xpath("//div[@title=\"" + device + "\"]")))
@@ -303,12 +310,19 @@ public class BrowserTasks implements Runnable {
 					log("Handling stale element reference exception");
 					handled = false;
 				} catch (TimeoutException e) {
-					System.out.println("Time out exception for device, probably invisible in the list. Handling...");
+					System.out.println("Time out exception for device, probably invisible in the list. Handling..." + device);
 					WebElement element = driver.findElement(By.xpath("//div[@class='thumb-center']"));
 					Actions builder = new Actions(driver);
 					builder.dragAndDropBy(element, 0, 40).build().perform();
 				} finally {
 					wait.withTimeout(Duration.ofSeconds(Dashboard.WAIT_TIMEOUT));
+				}
+				if(tries >= 15) {
+					Actions builder = new Actions(driver);
+					builder.moveToElement(driver.findElement(By.xpath("//div[contains(@class, 'fmip-modal-pane')]")), 0, 0)
+							.click().build().perform();
+					reportStatusToServer(device, "Warning: Device not found in list. Please check the device physically.");
+					throw new Exception("Device not found in the list!");
 				}
 			} while (!handled);
 		}
