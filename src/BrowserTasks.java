@@ -65,7 +65,6 @@ public class BrowserTasks implements Runnable {
 	}
 
 	private void acquireQuadrantDetails() {
-		// TODO Auto-generated method stub
 		try {
 			lock.lock();
 			// Acquire the device name
@@ -101,7 +100,6 @@ public class BrowserTasks implements Runnable {
 
 	@Override
 	public void run() {
-		// TODO Auto-generated method stub
 		try {
 			writer = new FileWriter(Thread.currentThread().getName() + ".txt", FILE_APPEND);
 
@@ -118,7 +116,6 @@ public class BrowserTasks implements Runnable {
 			log("Timeout exception");
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -159,15 +156,14 @@ public class BrowserTasks implements Runnable {
 				// Handling negative values or continuous 0 second wait
 				if (timeRemaining <= 0)
 					timeRemaining = 1;
-				System.out.println(
-						Thread.currentThread().getName() + " Remaining Time to wait: " + timeRemaining + " seconds");
+				System.out.println(Thread.currentThread().getName() + " Remaining Time to wait: " + timeRemaining + " seconds");
 				Thread.sleep(timeRemaining * 1000);
 				lock.lock();
 			}
 			if (!TasksRunner.endOfTasks) {
 				device = TasksRunner.deviceList.remove(0);
 				System.out.println(Thread.currentThread().getName() + " took device: " + device);
-				System.out.println("Remaining devices are: " + Arrays.toString(TasksRunner.deviceList.toArray()));
+				System.out.println(Thread.currentThread().getName() + "Remaining devices are: " + Arrays.toString(TasksRunner.deviceList.toArray()));
 			}
 
 		} catch (Exception e) {
@@ -189,7 +185,7 @@ public class BrowserTasks implements Runnable {
 			openDeviceDetails(device);
 		} catch (Exception e) {
 			e.printStackTrace();
-			System.out.println("Could not open device details. " + device + " device is not in list. Possible security breach!");
+			System.out.println(Thread.currentThread().getName() + "Could not open device details. " + device + " device is not in list. Possible security breach!");
 			return;
 		}
 
@@ -235,7 +231,7 @@ public class BrowserTasks implements Runnable {
 				// Report state of the device to server as in Lost Mode
 			}
 		} catch (Exception e) {
-			System.out.println("Got an error while checking device");
+			System.out.println(Thread.currentThread().getName() + "Got an error while checking device");
 			log("Got error while checking device");
 			e.printStackTrace();
 		}
@@ -248,7 +244,6 @@ public class BrowserTasks implements Runnable {
 				ExpectedConditions.elementToBeClickable(By.xpath("//div[contains(@title, \"Show devices using\")]")));
 		dropdown.click();
 
-		// TODO: Scroll to the top till the All devices label is visible
 		boolean scrollhandled = false;
 		do {
 			try {
@@ -256,7 +251,7 @@ public class BrowserTasks implements Runnable {
 						.until(ExpectedConditions.elementToBeClickable(By.xpath("//div[text()='All Devices']")));
 				scrollhandled = true;
 			} catch (Exception e) {
-				System.out.println("Unable to find the all devices div. Scrolling up...");
+				System.out.println(Thread.currentThread().getName() + "Unable to find the all devices div. Scrolling up...");
 				try {
 					WebElement element = driver.findElement(By.xpath("//div[@class='thumb-center']"));
 					Actions builder = new Actions(driver);
@@ -272,7 +267,7 @@ public class BrowserTasks implements Runnable {
 
 		WebElement currentDeviceLabel = dropdown.findElement(By.tagName("label"));
 		if (currentDeviceLabel.getText().equals(device)) {
-			System.out.println("Currently selected device is " + device + ". Handling...");
+			System.out.println(Thread.currentThread().getName() + "Currently selected device is " + device + ". Handling...");
 			Actions builder = new Actions(driver);
 			builder.moveToElement(driver.findElement(By.xpath("//div[contains(@class, 'fmip-modal-pane')]")), 0, 0)
 					.click().build().perform();
@@ -296,7 +291,7 @@ public class BrowserTasks implements Runnable {
 										By.xpath("//div[contains(@class, 'find-me')]/label[text()='OK']")));
 
 						suddenOKPopup.click();
-						System.out.println("Clicked on sudden ok");
+						System.out.println(Thread.currentThread().getName() + "Clicked on sudden ok");
 					} catch (Exception e) {
 						log("Could not find the sudden ok popup");
 						// e.printStackTrace();
@@ -310,7 +305,7 @@ public class BrowserTasks implements Runnable {
 					log("Handling stale element reference exception");
 					handled = false;
 				} catch (TimeoutException e) {
-					System.out.println("Time out exception for device, probably invisible in the list. Handling..." + device);
+					System.out.println(Thread.currentThread().getName() + "Time out exception for device, probably invisible in the list. Handling..." + device);
 					WebElement element = driver.findElement(By.xpath("//div[@class='thumb-center']"));
 					Actions builder = new Actions(driver);
 					builder.dragAndDropBy(element, 0, 40).build().perform();
@@ -450,21 +445,19 @@ public class BrowserTasks implements Runnable {
 		method.data = data;
 		Gson gson = new Gson();
 		String postbody = gson.toJson(method);
-		System.out.println("postbody generated:" + postbody);
+		System.out.println(Thread.currentThread().getName() + "postbody generated:" + postbody);
 		Request request = new Request.Builder().url("http://pwcimdm-server.000webhostapp.com/admin/admin.php")
 				.post(RequestBody.create(MEDIA_TYPE_MARKDOWN, postbody)).build();
 		client.newCall(request).enqueue(new Callback() {
 
 			@Override
 			public void onResponse(Call arg0, Response arg1) throws IOException {
-				// TODO Auto-generated method stub
-				System.out.println("response from server:" + arg1.body().string());
+				System.out.println(Thread.currentThread().getName() + "response from server:" + arg1.body().string());
 			}
 
 			@Override
 			public void onFailure(Call arg0, IOException arg1) {
-				// TODO Auto-generated method stub
-				System.out.println("failure on server!");
+				System.out.println(Thread.currentThread().getName() + "failure on server!");
 				arg1.printStackTrace();
 			}
 		});
@@ -483,7 +476,7 @@ public class BrowserTasks implements Runnable {
 					.visibilityOfElementLocated(By.xpath("//div[contains(@class, 'find-me')]/label[text()='OK']")));
 
 			suddenOKPopup.click();
-			System.out.println("Clicked on sudden ok");
+			System.out.println(Thread.currentThread().getName() + "Clicked on sudden ok");
 		} catch (Exception e) {
 			log("Could not find the sudden ok popup");
 			// e.printStackTrace();
@@ -496,7 +489,6 @@ public class BrowserTasks implements Runnable {
 			wait.withTimeout(Duration.ofSeconds(1))
 					.until(ExpectedConditions.elementToBeClickable(By.xpath("//label[text()=\"Next\"]"))).click();
 
-			// TODO: clear the textarea
 			WebElement LostModeMessage = wait.until(ExpectedConditions
 					.elementToBeClickable(By.xpath("//textarea[@aria-label=\"Enter a message (Optional).\"]")));
 			LostModeMessage.clear();
@@ -513,19 +505,21 @@ public class BrowserTasks implements Runnable {
 			while (true) {
 				if (lostModeSpinner.getAttribute("class").contains("sc-hidden"))
 					break;
-				else
+				else {
+					System.out.println(Thread.currentThread().getName() +" sleeping till the button is hidden...");
 					Thread.sleep(1000);
+				}
 			}
-			System.out.println((System.currentTimeMillis() - startTime) / 1000 + " seconds");
+			System.out.println(Thread.currentThread().getName() + (System.currentTimeMillis() - startTime) / 1000 + " seconds");
 		} catch (Exception e) {
-			System.out.println(
+			System.out.println(Thread.currentThread().getName() + 
 					"Exception while finding next button due to sudden popup probably or if already in lost mode");
 			try {
 				driver.findElement(By.xpath("//label[text()='Stop Lost Mode']"));
 				log(device + ":" + DEVICE_IS_IN_LOST_MODE);
 				deviceStatusText.append("\n" + DEVICE_IS_IN_LOST_MODE);
 			} catch (Exception e1) {
-				System.out.println("Could not find stop lost mode button... maybe sudden popup is present");
+				System.out.println(Thread.currentThread().getName() + "Could not find stop lost mode button... maybe sudden popup is present");
 			}
 		} finally {
 			wait.withTimeout(Duration.ofSeconds(Dashboard.WAIT_TIMEOUT));
